@@ -1,0 +1,88 @@
+// Определение пинов
+const int trigPin = 9;
+const int echoPin = 10;
+const int buttonPin = 2;
+
+const int redLedPin = 13;    // Красный: < 20 см
+const int yellowLedPin = 12; // Желтый: 20 - 50 см
+const int greenLedPin = 11;  // Зеленый: > 50 см
+
+void setup() {
+  // Настройка скорости обмена данными
+  Serial.begin(9600);
+
+  // Настройка пинов датчика и светодиодов
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+  
+  pinMode(redLedPin, OUTPUT);
+  pinMode(yellowLedPin, OUTPUT);
+  pinMode(greenLedPin, OUTPUT);
+
+  // Настройка кнопки (используем внутренний подтягивающий резистор)
+  pinMode(buttonPin, INPUT_PULLUP);
+}
+
+void loop() {
+  // Читаем состояние кнопки (при INPUT_PULLUP нажатая кнопка дает LOW)
+  bool buttonPressed = (digitalRead(buttonPin) == LOW);
+
+  if (!buttonPressed) {
+    // Если кнопка отпущена — выключаем все светодиоды
+    digitalWrite(redLedPin, LOW);
+    digitalWrite(yellowLedPin, LOW);
+    digitalWrite(greenLedPin, LOW);
+    return; // Пропускаем остальной цикл
+  }
+
+  // --- Замер расстояния ---
+  // 1. Очищаем линию Trig
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+
+  // 2. Подаем импульс 10 микросекунд
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  // 3. Считываем время движения эха в микросекундах
+  long duration = pulseIn(echoPin, HIGH);
+
+  // --- Правило безопасности (если датчик не поймал сигнал / вернул 0) ---
+  if (duration == 0) {
+    digitalWrite(redLedPin, LOW);
+    digitalWrite(yellowLedPin, LOW);
+    digitalWrite(greenLedPin, LOW);
+    Serial.println("Ошибка датчика: путь не определен (сигнал потерян)!");
+    delay(500);
+    return;
+  }
+
+  // --- Расчет расстояния по формуле из ваших записей ---
+  // distance = (duration * 0.0343) / 2
+  float distance = (duration * 0.0343) / 2.0;
+
+  // Вывод в монитор порта для отладки
+  Serial.print("Расстояние: ");
+  Serial.print(distance);
+  Serial.println(" см");
+
+  // --- Логика включения светодиодов в зависимости от дистанции ---
+  if (distance < 20.0) {
+    digitalWrite(redLedPin, HIGH);
+    digitalWrite(yellowLedPin, LOW);
+    digitalWrite(greenLedPin, LOW);
+  } 
+  else if (distance >= 20.0 && distance <= 50.0) {
+    digitalWrite(redLedPin, LOW);
+    digitalWrite(yellowLedPin, HIGH);
+    digitalWrite(greenLedPin, LOW);
+  } 
+  else { // distance > 50.0
+    digitalWrite(redLedPin, LOW);
+    digitalWrite(yellowLedPin, LOW);
+    digitalWrite(greenLedPin, HIGH);
+  }
+
+  delay(100); // Небольшая задержка перед следующим измерением
+}
